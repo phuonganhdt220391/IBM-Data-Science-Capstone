@@ -15,7 +15,6 @@ This repository contains the final project for the **IBM Data Science Profession
 | Interactive Plotly Dash application | [spacex_dash_app.py](spacex_dash_app.py) |
 | Machine-learning prediction | [SpaceX_Machine_Learning_Prediction.ipynb](SpaceX_Machine_Learning_Prediction.ipynb) |
 | Final report (PDF) | [Course 10_Data Science Capstone Project Report_PA.pdf](Course%2010_Data%20Science%20Capstone%20Project%20Report_PA.pdf) |
-| Final presentation (PowerPoint) | [Course 10_Data Science Capstone Project Report_PA.pptx](Course%2010_Data%20Science%20Capstone%20Project%20Report_PA.pptx) |
 
 ## Data files
 
