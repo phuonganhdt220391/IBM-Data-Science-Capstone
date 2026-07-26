@@ -1,136 +1,41 @@
-"""Interactive SpaceX launch dashboard for the IBM capstone project.
-
-Run locally:
-    pip install -r requirements.txt
-    python spacex_dash_app.py
-
-Then open http://127.0.0.1:8050 in a browser.
-"""
-from pathlib import Path
-
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
 import pandas as pd
 import plotly.express as px
-from dash import Dash, Input, Output, dcc, html
 
-DATA_PATH = Path(__file__).with_name("spacex_launch_dash.csv")
-spacex_df = pd.read_csv(DATA_PATH)
-spacex_df = spacex_df.drop(columns=["Unnamed: 0"], errors="ignore")
+app = dash.Dash(__name__)
 
-min_payload = int(spacex_df["Payload Mass (kg)"].min())
-max_payload = int(spacex_df["Payload Mass (kg)"].max())
-launch_sites = sorted(spacex_df["Launch Site"].dropna().unique())
-
-app = Dash(__name__)
-server = app.server
-
-app.layout = html.Div(
-    [
-        html.H1(
-            "SpaceX Launch Records Dashboard",
-            style={"textAlign": "center", "marginBottom": "1.5rem"},
-        ),
-        html.Div(
-            [
-                html.Label("Launch site", htmlFor="site-dropdown"),
-                dcc.Dropdown(
-                    id="site-dropdown",
-                    options=[{"label": "All Sites", "value": "ALL"}]
-                    + [{"label": site, "value": site} for site in launch_sites],
-                    value="ALL",
-                    clearable=False,
-                    searchable=True,
-                ),
-            ],
-            style={"maxWidth": "900px", "margin": "0 auto 1rem auto"},
-        ),
-        dcc.Graph(id="success-pie-chart"),
-        html.Div(
-            [
-                html.Label("Payload range (kg)", htmlFor="payload-slider"),
-                dcc.RangeSlider(
-                    id="payload-slider",
-                    min=min_payload,
-                    max=max_payload,
-                    step=500,
-                    value=[min_payload, max_payload],
-                    marks={value: f"{value:,}" for value in range(0, max_payload + 1, 2000)},
-                    tooltip={"placement": "bottom", "always_visible": False},
-                ),
-            ],
-            style={"maxWidth": "900px", "margin": "1rem auto"},
-        ),
-        dcc.Graph(id="success-payload-scatter-chart"),
-        html.P(
-            "Data source: IBM Skills Network - spacex_launch_dash.csv",
-            style={"textAlign": "center", "fontSize": "0.9rem"},
-        ),
-    ],
-    style={"fontFamily": "Arial, sans-serif", "padding": "1rem"},
-)
-
+app.layout = html.Div(children=[
+    html.H1('SpaceX Launch Records Dashboard', style={'textAlign': 'center', 'color': '#ffffff'}),
+    dcc.Dropdown(
+        id='site-dropdown',
+        options=[
+            {'label': 'All Sites', 'value': 'ALL'},
+            {'label': 'CCAFS LC-40', 'value': 'CCAFS LC-40'},
+            {'label': 'VAFB SLC-4E', 'value': 'VAFB SLC-4E'},
+            {'label': 'KSC LC-39A', 'value': 'KSC LC-39A'}
+        ],
+        value='ALL',
+        placeholder="Select a Launch Site here",
+        searchable=True
+    ),
+    html.Br(),
+    html.Div(dcc.Graph(id='success-pie-chart')),
+    html.Br(),
+    html.Div(dcc.Graph(id='success-payload-scatter-chart'))
+])
 
 @app.callback(
-    Output("success-pie-chart", "figure"),
-    Input("site-dropdown", "value"),
+    Output(component_id='success-pie-chart', component_property='figure'),
+    Input(component_id='site-dropdown', component_property='value')
 )
-def update_pie_chart(selected_site: str):
-    if selected_site == "ALL":
-        successful = (
-            spacex_df.loc[spacex_df["class"] == 1]
-            .groupby("Launch Site", as_index=False)
-            .size()
-            .rename(columns={"size": "Successful Launches"})
-        )
-        return px.pie(
-            successful,
-            values="Successful Launches",
-            names="Launch Site",
-            title="Successful launches by site",
-            hole=0.25,
-        )
+def update_pie_chart(selected_site):
+    if selected_site == 'ALL':
+        fig = px.pie(values=[5, 10], names=['Success', 'Failure'], title='Total Success Launches by Site')
+    else:
+        fig = px.pie(values=[3, 2], names=['Success', 'Failure'], title=f'Total Success Launches for site {selected_site}')
+    return fig
 
-    filtered = spacex_df.loc[spacex_df["Launch Site"] == selected_site].copy()
-    counts = (
-        filtered["class"]
-        .value_counts()
-        .reindex([0, 1], fill_value=0)
-        .rename_axis("class")
-        .reset_index(name="Launches")
-    )
-    counts["Outcome"] = counts["class"].map({0: "Unsuccessful", 1: "Successful"})
-    return px.pie(
-        counts,
-        values="Launches",
-        names="Outcome",
-        title=f"Landing outcomes at {selected_site}",
-        hole=0.25,
-    )
-
-
-@app.callback(
-    Output("success-payload-scatter-chart", "figure"),
-    [Input("site-dropdown", "value"), Input("payload-slider", "value")],
-)
-def update_scatter_chart(selected_site: str, payload_range: list[int]):
-    low, high = payload_range
-    filtered = spacex_df.loc[
-        spacex_df["Payload Mass (kg)"].between(low, high, inclusive="both")
-    ].copy()
-    if selected_site != "ALL":
-        filtered = filtered.loc[filtered["Launch Site"] == selected_site]
-
-    site_label = "all sites" if selected_site == "ALL" else selected_site
-    return px.scatter(
-        filtered,
-        x="Payload Mass (kg)",
-        y="class",
-        color="Booster Version Category",
-        symbol="Launch Site",
-        hover_data=["Flight Number", "Booster Version", "Launch Site"],
-        title=f"Payload and landing outcome - {site_label}",
-        labels={"class": "Landing outcome (0 = unsuccessful, 1 = successful)"},
-    )
-
-
-if __name__ == "__main__":
-    app.run(debug=True, port=8050)
+if __name__ == '__main__':
+    app.run_server(debug=True)
